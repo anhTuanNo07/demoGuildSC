@@ -1,9 +1,12 @@
 {
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.3",
+    "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/hardhat-upgrades": "^1.12.0",
+    "@openzeppelin/test-helpers": "^0.5.15",
     "ethers": "^5.5.2",
-    "hardhat": "^2.8.0"
+    "hardhat": "^2.8.0",
+    "web3": "^1.6.1"
   },
   "dependencies": {
     "@nomiclabs/hardhat-waffle": "^2.0.1",

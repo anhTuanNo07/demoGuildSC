@@ -1,25 +1,9 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 const { utils, BigNumber } = ethers;
+const { time } = require('@openzeppelin/test-helpers')
 
-describe("Greeter", function () {
-  it("Should return the new greeting once it's changed", async function () {
-    const Greeter = await ethers.getContractFactory("Greeter");
-    const greeter = await Greeter.deploy("Hello, world!");
-    await greeter.deployed();
-
-    expect(await greeter.greet()).to.equal("Hello, world!");
-
-    const setGreetingTx = await greeter.setGreeting("Hola, mundo!");
-
-    // wait until the transaction is mined
-    await setGreetingTx.wait();
-
-    expect(await greeter.greet()).to.equal("Hola, mundo!");
-  });
-});
-
-describe("Guild Mode", function () {
+describe("Guild basic function ", function () {
   // assign address
   before(async function() {
     this.signers = await ethers.getSigners();
@@ -32,20 +16,105 @@ describe("Guild Mode", function () {
   })
 
   // initial Token
-  this.beforeEach(async function() {
+  beforeEach(async function() {
     this.AcceptedToken = await ethers.getContractFactory("InitialToken", this.minter);
     this.ttm = await this.AcceptedToken.deploy("TuanTTM", "TTM", utils.parseEther("100000000"));
     await this.ttm.deployed();
-  })
-  it("create a new guild", async function() {
+
+    // Deploy the guild contract and initialize TTM token
     const GuildContract = await ethers.getContractFactory("MechGuild");
-    // const guildContract = await GuildContract.deploy();
-    // await guildContract.deployed();
-    // await this.
     this.guild = await upgrades.deployProxy(GuildContract, [this.ttm.address], {
       initializer: '__MechaGuild_init'
     });
     this.guild.deployed();
-    console.log(this.guild, 'this guild-------------------------')
+
+    // create the first guild for minter
+    await this.guild.connect(this.minter).createGuild(
+      (await time.latest()).toNumber(),
+      this.minter.address
+    )
+  })
+  it("minter create a new guild", async function() {
+    const guildArray = await this.guild.returnGuild()
+    expect(guildArray[0].guildMaster).to.equal(this.minter.address)
+  });
+
+  it("change guild master to other address not in the guild", async function() {
+    try {
+      // change guild master to alice who is not inside the guild
+      await this.guild.connect(this.minter).changeGuildMaster(this.alice.address)
+    } catch (error) {
+      expect(error.message)
+        .to.equal(`VM Exception while processing transaction: reverted with reason string 'Not the same guild'`)
+    }
+  });
+
+  it("change guild master to other address inside the guild", async function () {
+    // add alice to the guild
+    await this.guild.connect(this.minter).addMemberToGuild(this.alice.address)
+    const aliceGuild = await this.guild.returnMemberGuild(this.alice.address)
+    const minterGuild = await this.guild.returnMemberGuild(this.minter.address)
+
+    // change master guild
+    await this.guild.connect(this.minter).changeGuildMaster(this.alice.address)
+
+    const guildArray = await this.guild.returnGuild()
+    expect(guildArray[0].guildMaster).to.equal(this.alice.address)
+  });
+
+  it("remove member and add again", async function() {
+    await this.guild.connect(this.minter).addMemberToGuild(this.alice.address)
+    await this.guild.connect(this.minter).kickMember(this.alice.address)
+    try {
+      await this.guild.connect(this.minter).addMemberToGuild(this.alice.address)
+    } catch(error) {
+      expect(error.message)
+        .to.equal(`VM Exception while processing transaction: reverted with reason string 'Have not ended penalty time'`)
+    }
+  });
+
+  it("out of guild successfully", async function() {
+    await this.guild.connect(this.minter).addMemberToGuild(this.alice.address)
+    await this.guild.connect(this.alice).outOfGuild()
+    const aliceGuild = await this.guild.returnMemberGuild(this.alice.address)
+
+    expect(aliceGuild).to.equal(0)
+  });
+
+  it("request join private guild", async function() {
+    try{
+      await this.guild.connect(this.bob).requestJoinGuild(1)
+    } catch (error) {
+      expect(error.message)
+        .to.equal(`VM Exception while processing transaction: reverted with reason string 'not a public guild'`)
+    }
+  })
+
+  it("request join public guild", async function() {
+    await this.guild.connect(this.minter).changePublicStatus(true)
+    await this.guild.connect(this.bob).requestJoinGuild(1)
+    const bobGuild = await this.guild.returnMemberGuild(this.bob.address)
+    expect(bobGuild).to.equal(1)
+  });
+
+  it("create other guild while still be in certain guild", async function() {
+    try {
+      await this.guild.connect(this.minter).createGuild(
+        (await time.latest()).toNumber(),
+        this.minter.address
+      )
+    } catch(error) {
+      expect(error.message)
+        .to.equal(`VM Exception while processing transaction: reverted with reason string 'Must be not in certain guild'`)
+    }
+  })
+
+  it("guild master out guild", async function() {
+    try {
+      await this.guild.connect(this.minter).outOfGuild()
+    } catch (error) {
+      expect(error.message)
+        .to.equal(`VM Exception while processing transaction: reverted with reason string 'Be the master of guild'`)
+    }
   })
 })
