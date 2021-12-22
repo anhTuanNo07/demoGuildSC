@@ -21,7 +21,6 @@ contract MechGuild is
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.UintSet;
 
     uint32 public constant OUT_GUILD_PENALTY_TIME = 2 days;
-    // uint32 private lastGuildId = 0;
 
     // Detail information of guilds
     GuildInformation[] public guildInformation;
@@ -72,6 +71,14 @@ contract MechGuild is
         require(
             msg.sender == guildInformation[memberToGuild[msg.sender] - 1].guildMaster, 
             'Not the master of guild'
+        );
+        _;
+    }
+
+    modifier notGuildMaster() {
+        require(
+            msg.sender != guildInformation[memberToGuild[msg.sender] - 1].guildMaster, 
+            'Be the master of guild'
         );
         _;
     }
@@ -169,7 +176,7 @@ contract MechGuild is
         _addMemberToGuild(_guildId, msg.sender);
     }
 
-    function outOfGuild() public inGuild() {
+    function outOfGuild() public inGuild() notGuildMaster() {
         _outOfGuild(msg.sender);
     }
 
@@ -184,6 +191,10 @@ contract MechGuild is
     ) public inGuild() guildMaster() {
         guildInformation[memberToGuild[msg.sender] - 1].guildPublic = status;
     }
+
+    // function donateGuild
+
+    // function levelUp
 
     // private function
     function _outOfGuild(address _address) private {

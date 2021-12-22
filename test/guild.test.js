@@ -108,4 +108,13 @@ describe("Guild basic function ", function () {
         .to.equal(`VM Exception while processing transaction: reverted with reason string 'Must be not in certain guild'`)
     }
   })
+
+  it("guild master out guild", async function() {
+    try {
+      await this.guild.connect(this.minter).outOfGuild()
+    } catch (error) {
+      expect(error.message)
+        .to.equal(`VM Exception while processing transaction: reverted with reason string 'Be the master of guild'`)
+    }
+  })
 })
