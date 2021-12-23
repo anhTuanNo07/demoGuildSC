@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -13,7 +14,8 @@ import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeab
 contract MechGuild is
     Initializable,
     OwnableUpgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    ERC1155Upgradeable
 {
 
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -125,6 +127,15 @@ contract MechGuild is
         __Ownable_init();
 
         guildAcceptedToken = _acceptedToken;
+    }
+
+    function __MechaPilot_init(string memory uri_) external initializer {
+      __Ownable_init();
+      __ERC1155_init(uri_);
+    }
+
+    function setURI(string memory uri_) external onlyOwner {
+        _setURI(uri_);
     }
 
     function createGuild(
