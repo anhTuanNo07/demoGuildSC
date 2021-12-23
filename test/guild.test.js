@@ -18,7 +18,7 @@ describe("Guild basic function ", function () {
   // initial Token
   beforeEach(async function() {
     this.AcceptedToken = await ethers.getContractFactory("InitialToken", this.minter);
-    this.ttm = await this.AcceptedToken.deploy("TuanTTM", "TTM", utils.parseEther("100000000"));
+    this.ttm = await this.AcceptedToken.deploy("GuildTicket", "GTK", utils.parseEther("100000000"));
     await this.ttm.deployed();
 
     // Deploy the guild contract and initialize TTM token

@@ -26,7 +26,7 @@ contract MechGuild is
     GuildInformation[] public guildInformation;
 
     // The accept token 
-    IERC20Upgradeable public guildAcceptedToken;
+    IERC20Upgradeable public guildTicket;
 
     struct GuildInformation {
         uint256 totalSupply;
@@ -124,7 +124,7 @@ contract MechGuild is
     function __MechaGuild_init(IERC20Upgradeable _acceptedToken) public initializer {
         __Ownable_init();
 
-        guildAcceptedToken = _acceptedToken;
+        guildTicket = _acceptedToken;
     }
 
     function createGuild(
@@ -190,6 +190,10 @@ contract MechGuild is
         bool status
     ) public inGuild() guildMaster() {
         guildInformation[memberToGuild[msg.sender] - 1].guildPublic = status;
+    }
+
+    function receiveGuildTicket(address _memberAddress, uint256 _amount) public onlyOwner() {
+        
     }
 
     // function donateGuild
