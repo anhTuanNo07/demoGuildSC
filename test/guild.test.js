@@ -2,31 +2,42 @@ const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 const { utils, BigNumber } = ethers;
 const { time } = require('@openzeppelin/test-helpers')
+const { fromRpcSig } = require("ethereumjs-util")
+const { signGuildTicketClaim } = require('./util')
 
 describe("Guild basic function ", function () {
   // assign address
   before(async function() {
     this.signers = await ethers.getSigners();
-    this.alice = this.signers[0];
+    this.alice = this.signers[0]; // This is owner default
     this.bob = this.signers[1];
     this.carol = this.signers[2];
     this.minter = this.signers[4];
     
     // this.GuildMode = await ethers.getContractFactory("MechaGuild")
   })
-
+  
   // initial Token
   beforeEach(async function() {
     this.AcceptedToken = await ethers.getContractFactory("InitialToken", this.minter);
     this.ttm = await this.AcceptedToken.deploy("GuildTicket", "GTK", utils.parseEther("100000000"));
     await this.ttm.deployed();
-
-    // Deploy the guild contract and initialize TTM token
+    
+    // Deploy the guild contract
     const GuildContract = await ethers.getContractFactory("MechGuild");
-    this.guild = await upgrades.deployProxy(GuildContract, [this.ttm.address], {
+    this.guild = await upgrades.deployProxy(GuildContract, {
       initializer: '__MechaGuild_init'
     });
     this.guild.deployed();
+    
+    // set owner
+    await this.guild.connect(this.alice).setSigner(this.minter.address)
+    
+    // Sign for minter create guild
+    const signatureRes = await signGuildTicketClaim(this.guild, 300, 0, this.minter)
+
+    // claim Tokens
+    await this.guild.connect(this.minter).claimGuildTicket(300, 0, signatureRes)
 
     // create the first guild for minter
     await this.guild.connect(this.minter).createGuild(
@@ -34,6 +45,13 @@ describe("Guild basic function ", function () {
       this.minter.address
     )
   })
+
+  
+  it("check balance of minter", async function() {
+    const minterGuildTicket = await this.guild.getGuildTicketCount(this.minter.address)
+    expect(minterGuildTicket).to.equal(200)
+  })
+
   it("minter create a new guild", async function() {
     const guildArray = await this.guild.returnGuild()
     expect(guildArray[0].guildMaster).to.equal(this.minter.address)
